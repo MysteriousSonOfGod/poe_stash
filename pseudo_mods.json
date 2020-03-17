@@ -1,0 +1,22 @@
+{
+  "pseudo_maximum_life": {
+    "types": ["Strength", "IncreasedLife"],
+    "mult": [0.2,1]
+  },
+  "pseudo_maximum_mana": {
+    "types": ["Intelligence","IncreasedMana"],
+    "mult": [0.2, 1]
+  },
+  "pseudo_cold_resistance": {
+    "types": ["ColdResistance", "AllResistance"],
+    "mult": [1, 1]
+  },
+  "pseudo_fire_resistance": {
+    "types": ["FireResistance", "AllResistance"],
+    "mult": [1, 1]
+  },
+  "pseudo_lightning_resistance": {
+    "types": ["LightningResistance", "AllResistance"],
+    "mult": [1, 1]
+  }
+}
