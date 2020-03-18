@@ -18,5 +18,37 @@
   "pseudo_lightning_resistance": {
     "types": ["LightningResistance", "AllResistance"],
     "mult": [1, 1]
+  },
+  "pseudo_added_lightning_damage_spells": {
+    "types": ["SpellAddedLightningDamage", "SpellAddedLightningDamageHybrid", "LightningDamage"],
+    "mult": [1, 1, 1]
+  },
+  "pseudo_added_fire_damage_spells": {
+    "types": ["SpellAddedFireDamage", "SpellAddedFireDamageHybrid", "FireDamage"],
+    "mult": [1, 1, 1]
+  },
+  "pseudo_added_cold_damage_spells": {
+    "types": ["SpellAddedColdDamage", "SpellAddedColdDamageHybrid", "ColdDamage"],
+    "mult": [1, 1, 1]
+  },
+  "pseudo_added_chaos_damage_spells": {
+    "types": ["SpellAddedChaosDamage", "SpellAddedChaosDamageHybrid", "ChaosDamage"],
+    "mult": [1, 1, 1]
+  },
+  "pseudo_increased_lightning_damage_spells": {
+    "types": ["LightningDamagePercent", "SpellDamage", "WeaponSpellDamage"],
+    "mult": [1, 1, 1]
+  },
+  "pseudo_increased_fire_damage_spells": {
+    "types": ["FireDamagePercent", "SpellDamage", "WeaponSpellDamage"],
+    "mult": [1, 1, 1]
+  },
+  "pseudo_increased_cold_damage_spells": {
+    "types": ["ColdDamagePercent", "SpellDamage", "WeaponSpellDamage"],
+    "mult": [1, 1, 1]
+  },
+  "pseudo_increased_chaos_damage_spells": {
+    "types": ["ChaosDamagePercent", "SpellDamage", "WeaponSpellDamage"],
+    "mult": [1, 1, 1]
   }
 }
