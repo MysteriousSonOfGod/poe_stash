@@ -1,4 +1,6 @@
 import requests
+from loguru import logger
+
 from config import AccountConfig
 
 

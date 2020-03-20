@@ -1,17 +1,22 @@
+import asyncio
 import re
 import json
+import itertools
 
 import pandas as pd
 from stash import AccountStash
+from loguru import logger
 
 
 def get_mods():
+    logger.info('Reading mods file')
     with open('RePoE-master/RePoE/data/mods.json', 'r') as f:
         mods = json.load(f)
     return mods
 
 
 def create_rare_mods_df(mods: dict) -> pd.DataFrame:
+    logger.info('Creating mods df')
     mod_names = []
     groups = []
     types = []
@@ -60,12 +65,14 @@ def create_rare_mods_df(mods: dict) -> pd.DataFrame:
 
 
 def get_stats_translations():
+    logger.info('Reading translations file')
     with open('RePoE-master/RePoE/data/stat_translations.json', 'r') as f:
         stats_translations = json.load(f)
     return stats_translations
 
 
 def create_translation_df(translations: dict) -> pd.DataFrame:
+    logger.info('Creating translations df')
     formats = []
     strings = []
     ids = []
@@ -88,6 +95,7 @@ def create_translation_df(translations: dict) -> pd.DataFrame:
 
 
 def get_test_stash():
+    logger.info('Using test stash')
     with open("test_stash.json", 'r') as f:
         test_stash = json.load(f)
     return test_stash
@@ -106,32 +114,63 @@ def remove_mods_based_on_item_class(item_class: str, rare_mods: pd.DataFrame) ->
     return rare_mods
 
 
+def get_first_element_of_list_of_lists_or_self(x):
+    if isinstance(x, list):
+        if x:
+            return list(itertools.chain(*x))[0]
+        else:
+            return x
+    else:
+        return x
+
+
+def clean_properties_df(df: pd.DataFrame) -> pd.DataFrame:
+    df['values'] = df['values'].map(get_first_element_of_list_of_lists_or_self)
+    df.loc[:, 'values'] = df['values'].str.replace('%', '')
+    df = df.rename(columns={'values': 'value'})
+    if df['value'].str.contains('-').any():
+        df = pd.concat([df, pd.DataFrame(df['value'].str.split('-', expand=True).values,
+                                         columns=['min', 'max_value'])], axis=1)
+        df = df.drop(['value', 'displayMode', 'type'], axis=1)
+        df = df.rename(columns={'min': 'value'})
+        df['max_value'] = pd.to_numeric(df['max_value'])
+    else:
+        df = df.drop(['displayMode', 'type'], axis=1)
+    df = df.dropna(subset=['value'])
+    df['value'] = pd.to_numeric(df['value'])
+    return df
+
+
 def get_item_properties(properties: list) -> list:
+    logger.info('Creating item properties')
     new_properties = []
     phys_damage = 0
     elemental_damage = 0
-    for property in properties:
-        if property['name'] == 'Physical Damage':
-            phys_damage = property['values'][0][0].split('-')
-            phys_damage = sum([int(x) for x in phys_damage])
-        if property['name'] == 'Elemental Damage':
-            elemental_damage = property['values'][0][0].split('-')
-            elemental_damage = sum([int(x) for x in elemental_damage])
-        if property['name'] == 'Attacks per Second':
-            aps = float(property['values'][0][0])
-        if property['values']:
-            property['values'] = property['values'][0][0]
-    if phys_damage > 0 or elemental_damage > 0:
-        phys_dps = phys_damage/aps
-        ele_dps = elemental_damage/aps
-        all_dps = phys_dps + ele_dps
-        new_properties = [{'name': 'Dps', 'value': all_dps}, {'name': 'Physical Dps', 'value': phys_dps},
-                          {'name': 'Elemental Dps', 'value': ele_dps}]
+    properties_df = pd.DataFrame(properties)
+    properties = clean_properties_df(properties_df)
+    if not properties.empty:
+        for idx, row in properties.iterrows():
+            prop_name = row['name']
+            if prop_name == 'Physical Damage':
+                phys_damage = sum([row['value'], row['max_value']])
+            if prop_name == 'Elemental Damage':
+                elemental_damage = sum([row['value'], row['max_value']])
+            if prop_name == 'Attacks per Second':
+                aps = row['value']
+        if phys_damage > 0 or elemental_damage > 0:
+            phys_dps = phys_damage/aps
+            ele_dps = elemental_damage/aps
+            all_dps = phys_dps + ele_dps
+            new_properties = [{'name': 'Dps', 'value': all_dps}, {'name': 'Physical Dps', 'value': phys_dps},
+                              {'name': 'Elemental Dps', 'value': ele_dps}]
+    properties = properties.to_dict('records')
     return properties + new_properties
 
 
 def create_item_mod(possible_mod_ids: list, item_mod: pd.Series, rare_mods: pd.DataFrame, mod_value: int) -> dict:
+    logger.info('Creating item mods dict')
     for mod_id in possible_mod_ids:
+        # Comparing mod with rare mods multiple times is expensive
         possible_mods = rare_mods[rare_mods.mod_id == mod_id]
         if len(possible_mods) > 0:
             for idx, row in possible_mods.iterrows():
@@ -179,7 +218,7 @@ def create_item_mods(mods: list, translations: pd.DataFrame,
             mod_value = sum(mod_values[:2])/len(mod_values)
         replaced_mod = re.sub(regex, '#', mod)
         possible_mod_ids = translations.id[translations.string == replaced_mod].tolist()
-        rare_mods = remove_mods_based_on_item_class(item_class, rare_mods)
+        # rare_mods = remove_mods_based_on_item_class(item_class, rare_mods)
         class_rare_mods = rare_mods[rare_mods.tag == item_class]
         default_rare_mods = rare_mods[rare_mods.tag == 'default']
         item_mod = create_item_mod(possible_mod_ids, item_mod, class_rare_mods, mod_value)
@@ -194,13 +233,14 @@ def create_item_mods(mods: list, translations: pd.DataFrame,
 
 
 def create_item_pseudo_mods(item_mods: dict) -> dict:
+    logger.info("Creating pseudo mods for item")
     with open('pseudo_mods.json', 'r') as f:
         pseudo_mods_db = json.load(f)
     item_pseudo_mods = []
     all_elemental = 0
     for item_mod in item_mods:
-        for key, pseudo_mod in pseudo_mods_db.items():
-            if item_mod:
+        if item_mod:
+            for key, pseudo_mod in pseudo_mods_db.items():
                 if item_mod['type'] in pseudo_mod['types']:
                     mult = pseudo_mod['mult'][pseudo_mod['types'].index(item_mod['type'])]
                     pseudo_mod_value = item_mod['value'] * mult
@@ -213,10 +253,50 @@ def create_item_pseudo_mods(item_mods: dict) -> dict:
                                              'value': 0})
     item_pseudo_mods.append({'type': 'pseudo_sum_elemental_resistance',
                              'value': all_elemental})
+    item_pseudo_mods = pd.DataFrame(item_pseudo_mods).drop_duplicates('type').to_dict('records')
     return item_pseudo_mods
 
 
-def get_items(tab):
+def create_item_info(item: dict, bases: pd.DataFrame, translations: pd.DataFrame, rare_mods: pd.DataFrame):
+    mods = []
+    properties = []
+    inventory_id = item['inventoryId']
+    x = item['x']
+    y = item['y']
+    item_class = bases.item_class[bases.name.str.contains(item['typeLine'])].values[0].lower()
+    if item_class in ['stackablecurrency', 'jewel']:
+        return {
+            'props': [],
+            'mods': [],
+            'item_class': '',
+            'inventory_id': inventory_id,
+            'x': x,
+            'y': y
+        }
+    for key, value in item.items():
+        if key == 'properties':
+            properties = get_item_properties(value)
+        if key == 'implictMods':
+            for mod in value:
+                mods.append(mod)
+        if key == 'explicitMods':
+            for mod in value:
+                mods.append(mod)
+    new_mods = create_item_mods(mods, translations, item_class, rare_mods)
+    pseudo_mods = create_item_pseudo_mods(new_mods)
+    new_item = {
+        'props': properties,
+        'mods': new_mods + pseudo_mods,
+        'item_class': item_class,
+        'inventory_id': inventory_id,
+        'x': x,
+        'y': y
+    }
+    return new_item
+
+
+def get_items(tab) -> dict:
+    logger.info('Creating items dict')
     all_mods = get_mods()
     rare_mods = create_rare_mods_df(all_mods)
     bases = pd.read_json('bases.json', orient='records')
@@ -224,34 +304,8 @@ def get_items(tab):
     translations = create_translation_df(translations)
     items = {}
     for item in tab:
-        mods = []
-        properties = []
         item_name = item['name']
-        inventory_id = item['inventoryId']
-        x = item['x']
-        y = item['y']
-        item_class = bases.item_class[bases.name.str.contains(item['typeLine'])].values[0].lower()
-        for key, value in item.items():
-            if key == 'properties':
-                properties = get_item_properties(value)
-            if key == 'implictMods':
-                for mod in value:
-                    mods.append(mod)
-            if key == 'explicitMods':
-                for mod in value:
-                    mods.append(mod)
-        if item_class in ['stackablecurrency', 'jewel']:
-            continue
-        new_mods = create_item_mods(mods, translations, item_class, rare_mods)
-        pseudo_mods = create_item_pseudo_mods(new_mods)
-        new_item = {
-            'properties': properties,
-            'mods': new_mods + pseudo_mods,
-            'item_class': item_class,
-            'inventory_id': inventory_id,
-            'x': x,
-            'y': y
-        }
+        new_item = create_item_info(item, bases, translations, rare_mods)
         items[item_name] = new_item
     return items
 
