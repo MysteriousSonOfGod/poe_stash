@@ -1,11 +1,13 @@
-import asyncio
 import re
 import json
 import itertools
+import collections
 
 import pandas as pd
-from stash import AccountStash
 from loguru import logger
+
+from stash import get_account_stash, get_test_stash
+from api_comm import get_session_id
 
 
 def get_mods():
@@ -92,17 +94,6 @@ def create_translation_df(translations: dict) -> pd.DataFrame:
     })
     # df.to_json('translations.json', orient='records')
     return df
-
-
-def get_test_stash():
-    logger.info('Using test stash')
-    with open("test_stash.json", 'r') as f:
-        test_stash = json.load(f)
-    return test_stash
-
-
-def select_stash_tabs():
-    return [0, 1, 2]
 
 
 def remove_mods_based_on_item_class(item_class: str, rare_mods: pd.DataFrame) -> pd.DataFrame:
@@ -234,7 +225,7 @@ def create_item_mods(mods: list, translations: pd.DataFrame,
 
 def create_item_pseudo_mods(item_mods: dict) -> dict:
     logger.info("Creating pseudo mods for item")
-    with open('pseudo_mods.json', 'r') as f:
+    with open('data/pseudo_mods.json', 'r') as f:
         pseudo_mods_db = json.load(f)
     item_pseudo_mods = []
     all_elemental = 0
@@ -257,22 +248,38 @@ def create_item_pseudo_mods(item_mods: dict) -> dict:
     return item_pseudo_mods
 
 
+def create_none_item(x, y, inventory_id):
+    item = {
+        'props': [],
+        'mods': [],
+        'item_class': '',
+        'inventory_id': inventory_id,
+        'x': x,
+        'y': y
+    }
+    return item
+
+
 def create_item_info(item: dict, bases: pd.DataFrame, translations: pd.DataFrame, rare_mods: pd.DataFrame):
     mods = []
     properties = []
     inventory_id = item['inventoryId']
     x = item['x']
     y = item['y']
-    item_class = bases.item_class[bases.name.str.contains(item['typeLine'])].values[0].lower()
-    if item_class in ['stackablecurrency', 'jewel']:
-        return {
-            'props': [],
-            'mods': [],
-            'item_class': '',
-            'inventory_id': inventory_id,
-            'x': x,
-            'y': y
-        }
+    try:
+        item_class = bases.item_class[bases.name.str.contains(item['typeLine'])].values[0].lower()
+    except Exception:
+        logger.debug('Item base name not in bases.json')
+        return create_none_item(x, y, inventory_id)
+    if 'flavourText' in item.keys():
+        return create_none_item(x, y, inventory_id)
+    if item['icon'] in ['https://web.poecdn.com/image/Art/2DItems/Divination/' \
+                       'InventoryIcon.png?w=1&h=1&scale=1&v=a8ae131b97fad3c64de0e6d9f250d743']:
+        return create_none_item(x, y, inventory_id)
+    if item_class in ['stackablecurrency', 'jewel', 'abyssjewel',
+                      'divinationcard', 'active skill gem', 'support skill gem',
+                      'utilityflask', 'lifeflask', 'manaflask', 'hybridflask']:
+        return create_none_item(x, y, inventory_id)
     for key, value in item.items():
         if key == 'properties':
             properties = get_item_properties(value)
@@ -295,13 +302,8 @@ def create_item_info(item: dict, bases: pd.DataFrame, translations: pd.DataFrame
     return new_item
 
 
-def get_items(tab) -> dict:
+def get_items(tab: dict, bases: dict, translations: pd.DataFrame, rare_mods: pd.DataFrame) -> dict:
     logger.info('Creating items dict')
-    all_mods = get_mods()
-    rare_mods = create_rare_mods_df(all_mods)
-    bases = pd.read_json('bases.json', orient='records')
-    translations = get_stats_translations()
-    translations = create_translation_df(translations)
     items = {}
     for item in tab:
         item_name = item['name']
@@ -310,10 +312,33 @@ def get_items(tab) -> dict:
     return items
 
 
+def transform_stash_tabs_items(stash_tabs_items: dict) -> dict:
+    new_dict = collections.defaultdict(dict)
+    for name, stats in stash_tabs_items.items():
+        item_class = stats.get('item_class')
+        new_dict[item_class][name] = stats
+    new_dict = dict(new_dict)
+    return new_dict
+
+
+def get_items_from_all_tabs(stash_tabs: list) -> dict:
+    stash_tabs_items = {}
+    all_mods = get_mods()
+    rare_mods = create_rare_mods_df(all_mods)
+    bases = pd.read_json('data/Bases.json', orient='records')
+    translations = get_stats_translations()
+    translations = create_translation_df(translations)
+    for tab in stash_tabs:
+        tab_items = get_items(tab, bases, translations, rare_mods)
+        stash_tabs_items = {**stash_tabs_items, **tab_items}
+    return stash_tabs_items
+
+
 def main():
-    with open('test_stash.json', 'r') as f:
-        tab = json.load(f)
-    items = get_items(tab)
+    sessid = get_session_id()
+    # stash = get_account_stash(get_session_id())
+    tab = [get_test_stash()]
+    items = get_items_from_all_tabs(tab)
     pass
 
 

@@ -98,9 +98,13 @@ def get_alternative_values():
     return alt_values
 
 
+def open_filters_files(path: str):
+    with open(path, 'r') as f:
+        filters = json.load(f)
+    return filters
+
+
 def save_filter_model(filter_model):
-    if isinstance(filter_model, dict):
-        filter_model = [filter_model]
     with open('filters.json', 'w') as f:
         json.dump(filter_model, f)
 
@@ -108,8 +112,7 @@ def save_filter_model(filter_model):
 def update_filter_model(filter_model: dict):
     with open('filters.json', 'r') as f:
         filters = json.load(f)
-    filters = [x for x in filters if x != filter_model]
-    filters.append(filter_model)
+    filters = {**filters, **filter_model}
     save_filter_model(filters)
 
 
@@ -121,19 +124,22 @@ def save_or_update_filter_model(filter_model: dict):
         save_filter_model(filter_model)
 
 
-def create_filter_model():
+def create_filter_model(filter_name: str):
     and_dict = get_and_values()
     or_values = get_alternative_values()
     filter_model = {
-        'AND': and_dict,
-        'OR': or_values
+        filter_name: {
+            'AND': and_dict,
+            'OR': or_values
+        }
     }
     save_or_update_filter_model(filter_model)
     return filter_model
 
 
-def create_filters_from_filter_model(raw_filter: dict) -> list:
+def create_filters_from_filter_model(raw_filter: dict, filter_name: str) -> list:
     new_filters = []
+    raw_filter = raw_filter[filter_name]
     and_item_class = raw_filter['AND']['item_class']
     and_mods = raw_filter['AND']['mods']
     and_prop = raw_filter['AND']['props']
@@ -226,7 +232,7 @@ def filter_item(filters: list, item: dict):
 
 def get_wanted_items():
     wanted_items = []
-    with open('test_stash.json', 'r') as f:
+    with open('data/test_stash.json', 'r') as f:
         tab = json.load(f)
     stash_items = get_items(tab)
     test_filter = create_filter_model()
@@ -238,8 +244,9 @@ def get_wanted_items():
 
 
 def main():
-    test_filter = create_filter_model()
-    filters = create_filters_from_filter_model(test_filter)
+    filter_name = 'boots1'
+    test_filter = create_filter_model(filter_name)
+    filters = create_filters_from_filter_model(test_filter, filter_name)
     pass
 
 
