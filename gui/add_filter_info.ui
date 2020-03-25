@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>Dialog</class>
- <widget class="QDialog" name="Dialog">
+ <class>AddFilterInfoDialog</class>
+ <widget class="QDialog" name="AddFilterInfoDialog">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -21,15 +21,8 @@
      </property>
     </widget>
    </item>
-   <item row="4" column="0">
-    <widget class="QLabel" name="label_4">
-     <property name="text">
-      <string>Value</string>
-     </property>
-    </widget>
-   </item>
    <item row="0" column="1">
-    <widget class="QComboBox" name="comboBox">
+    <widget class="QComboBox" name="comboBox_stat">
      <item>
       <property name="text">
        <string>mods</string>
@@ -55,48 +48,22 @@
     </widget>
    </item>
    <item row="2" column="1">
-    <widget class="QComboBox" name="comboBox_3"/>
-   </item>
-   <item row="4" column="1">
-    <widget class="QLineEdit" name="lineEdit"/>
-   </item>
-   <item row="3" column="1">
-    <widget class="QComboBox" name="comboBox_2">
-     <item>
-      <property name="text">
-       <string>&gt;</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>&lt;</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>&gt;=</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>&lt;=</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>==</string>
-      </property>
-     </item>
-    </widget>
+    <widget class="QComboBox" name="comboBox_type"/>
    </item>
    <item row="3" column="0">
-    <widget class="QLabel" name="label_3">
+    <widget class="QLabel" name="label_4">
      <property name="text">
-      <string>Operator</string>
+      <string>Value</string>
      </property>
     </widget>
    </item>
-   <item row="10" column="1">
+   <item row="3" column="1">
+    <widget class="QLineEdit" name="line_value"/>
+   </item>
+   <item row="4" column="1">
+    <widget class="QTextBrowser" name="text_show_current_dict"/>
+   </item>
+   <item row="9" column="1">
     <widget class="QDialogButtonBox" name="buttonBox">
      <property name="orientation">
       <enum>Qt::Horizontal</enum>
@@ -106,11 +73,8 @@
      </property>
     </widget>
    </item>
-   <item row="5" column="1">
-    <widget class="QTextBrowser" name="textBrowser"/>
-   </item>
-   <item row="5" column="0">
-    <widget class="QToolButton" name="toolButton">
+   <item row="4" column="0">
+    <widget class="QToolButton" name="button_tool_plus">
      <property name="text">
       <string>+</string>
      </property>
@@ -123,12 +87,12 @@
   <connection>
    <sender>buttonBox</sender>
    <signal>accepted()</signal>
-   <receiver>Dialog</receiver>
+   <receiver>AddFilterInfoDialog</receiver>
    <slot>accept()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>285</x>
-     <y>284</y>
+     <x>196</x>
+     <y>329</y>
     </hint>
     <hint type="destinationlabel">
      <x>157</x>
@@ -139,12 +103,12 @@
   <connection>
    <sender>buttonBox</sender>
    <signal>rejected()</signal>
-   <receiver>Dialog</receiver>
+   <receiver>AddFilterInfoDialog</receiver>
    <slot>reject()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>285</x>
-     <y>290</y>
+     <x>196</x>
+     <y>335</y>
     </hint>
     <hint type="destinationlabel">
      <x>286</x>
